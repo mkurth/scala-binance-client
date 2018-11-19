@@ -6,9 +6,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array, byteArray2Int8Array}
 
-class MessageSigning (implicit val ex: ExecutionContext) {
+class JsMessageSigning extends MessageSigning {
 
-  def hmacSha256(secret: String, data: String): Future[String] = {
+  def hmacSha256(secret: String, data: String)(implicit ex: ExecutionContext): Future[String] = {
     val keyData = byteArray2Int8Array(secret.getBytes)
     val hmac: KeyAlgorithmIdentifier = HmacKeyAlgorithm("HMAC", HashAlgorithm.`SHA-256`, 512)
     val key = GlobalCrypto.crypto.subtle.importKey(
