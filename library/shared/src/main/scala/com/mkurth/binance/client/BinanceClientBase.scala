@@ -12,7 +12,12 @@ case class BinanceAuth(apiKey: String, secretKey: String)
 
 case class ServerTime(serverTime: Long)
 
-class BinanceClient(binanceAuth: BinanceAuth, messageSigning: MessageSigning)(implicit val ex: ExecutionContext, val sttpBackend: SttpBackend[Future, Nothing]) {
+trait BinanceClientBase {
+
+  val binanceAuth: BinanceAuth
+  val messageSigning: MessageSigning
+  implicit val ex: ExecutionContext
+  implicit val sttpBackend: SttpBackend[Future, Nothing]
 
   private val base = "https://api.binance.com/api/v1"
   private val baseV3 = "https://api.binance.com/api/v3"
