@@ -10,6 +10,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class BinanceAuth(apiKey: String, secretKey: String)
 
+case class ServerTime(serverTime: Long)
+
 class BinanceClient(binanceAuth: BinanceAuth, messageSigning: MessageSigning)(implicit val ex: ExecutionContext, val sttpBackend: SttpBackend[Future, Nothing]) {
 
   private val base = "https://api.binance.com/api/v1"
@@ -26,15 +28,17 @@ class BinanceClient(binanceAuth: BinanceAuth, messageSigning: MessageSigning)(im
 
   def serverTime: Future[Long] = {
     sttp.get(uri"$base/time")
+      .response(asJson[ServerTime])
       .send()
-      .map(response => response.unsafeBody.toLong)
+      .map(response => response.body.right.get.right.get.serverTime)
   }
 
   def testOrder(order: Order): Future[OrderResponse] = {
     val json = order.asJson
     messageSigning.hmacSha256(binanceAuth.secretKey, json.toString()).flatMap(data => {
       sttp.post(uri"$base/order/test")
-        .body(json.asJsonObject.add("signature", Json.fromString(data)))
+        .body(json.withObject(obj => obj.add("signature", Json.fromString(data)).asJson))
+        .header("X-MBX-APIKEY", binanceAuth.apiKey)
         .response(asJson[OrderResponse])
         .send()
         .map(response => response.body.right.get.right.get)
@@ -45,7 +49,8 @@ class BinanceClient(binanceAuth: BinanceAuth, messageSigning: MessageSigning)(im
     val json = order.asJson
     messageSigning.hmacSha256(binanceAuth.secretKey, json.toString()).flatMap(data => {
       sttp.post(uri"$base/order")
-        .body(json.asJsonObject.add("signature", Json.fromString(data)))
+        .body(json.withObject(obj => obj.add("signature", Json.fromString(data)).asJson))
+        .header("X-MBX-APIKEY", binanceAuth.apiKey)
         .response(asJson[OrderResponse])
         .send()
         .map(response => response.body.right.get.right.get)
@@ -56,6 +61,7 @@ class BinanceClient(binanceAuth: BinanceAuth, messageSigning: MessageSigning)(im
     serverTime.flatMap(timestamp =>
       messageSigning.hmacSha256(binanceAuth.secretKey, s"timestamp=$timestamp").flatMap(signature =>
         sttp.get(uri"$baseV3/account?timestamp=$timestamp&signature=$signature")
+          .header("X-MBX-APIKEY", binanceAuth.apiKey)
           .response(asJson[AccountInfo])
           .send()
           .map(response => response.body.right.get.right.get)
@@ -64,7 +70,6 @@ class BinanceClient(binanceAuth: BinanceAuth, messageSigning: MessageSigning)(im
   }
 
   def exchangeInfo: Future[ExchangeInfo] = {
-    import Filter.decodeFilter
     sttp.get(uri"$base/exchangeInfo")
       .response(asJson[ExchangeInfo])
       .send()

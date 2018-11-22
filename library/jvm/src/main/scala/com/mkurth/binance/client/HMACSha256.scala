@@ -7,7 +7,7 @@ import javax.xml.bind.DatatypeConverter
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class JVMMessageSigning extends MessageSigning {
+class HMACSha256 extends MessageSigning {
   override def hmacSha256(sec: String, data: String)(implicit ex: ExecutionContext): Future[String] = {
     Future {
       val secret = new SecretKeySpec(sec.getBytes("utf-8"), "HmacSHA256")
