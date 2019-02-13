@@ -22,7 +22,7 @@ class HMACSha256 extends MessageSigning {
     key.flatMap(k => GlobalCrypto.crypto.subtle.sign("HMAC", k, byteArray2Int8Array(data.getBytes)).toFuture.map(buf => {
       val bab = buf.asInstanceOf[ArrayBuffer]
       val x = new Uint8Array(bab)
-      x.map(_.toHexString).mkString
+      x.map(short => ("00" + short.toHexString).takeRight(2)).mkString
     }))
   }
 
